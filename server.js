@@ -52,18 +52,9 @@ app.all('/epson/:printerId', (req, res) => {
   const job = q.shift();
   console.log(`[QUEUE] Envoi job à ${printerId} (${job.jobId}) - Reste: ${q.length}`);
 
-  // job.xml DOIT contenir uniquement <epos-print ...>...</epos-print>
-  const inner = job.xml;
-
-  const soap = `<?xml version="1.0" encoding="utf-8"?>` +
-    `<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">` +
-      `<s:Body>` +
-        inner +
-      `</s:Body>` +
-    `</s:Envelope>`;
-
+  // XML NU — EXACTEMENT ce que la TM-m30III attend en SDP
   res.set('Content-Type', 'text/xml; charset=utf-8');
-  return res.status(200).send(soap);
+  res.status(200).send(job.xml);
 });
 
 // 3) Debug : voir les files d'attente
