@@ -46,15 +46,16 @@ app.all('/epson/:printerId', (req, res) => {
   const q = queues[printerId] || [];
 
   if (!q.length) {
-    return res.status(204).end();
+    // Pas de job → réponse vide (XML vide)
+    res.set('Content-Type', 'text/xml; charset=utf-8');
+    return res.status(200).send('');  // 200 + body vide = "no data"
   }
 
   const job = q.shift();
   console.log(`[QUEUE] Envoi job à ${printerId} (${job.jobId}) - Reste: ${q.length}`);
 
-  // XML NU — EXACTEMENT ce que la TM-m30III attend en SDP
   res.set('Content-Type', 'text/xml; charset=utf-8');
-  res.status(200).send(job.xml);
+  return res.status(200).send(job.xml);
 });
 
 // 3) Debug : voir les files d'attente
