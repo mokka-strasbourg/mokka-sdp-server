@@ -4,7 +4,7 @@
 #
 
 app = 'mokka-sdp-server'
-primary_region = 'iad'
+primary_region = 'cdg'
 
 [build]
 
