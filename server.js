@@ -45,33 +45,35 @@ app.post('/printJobs', (req, res) => {
 // --- 2) Imprimante Epson (SDP) → récupération d’un job ---
 // L’URL appelée par l’imprimante = /epson/<printerId>
 app.all('/epson/:printerId', (req, res) => {
-  const printerId = req.params.printerId;
+  const printerId = req.params.printerId; // robertsau_boulangerie
   const q = queues[printerId] || [];
 
-  // --- Aucun job → Epson veut un 200 + XML vide ---
+  res.set('Content-Type', 'text/xml; charset=utf-8');
+
   if (!q.length) {
-    res.set('Content-Type', 'text/xml; charset=utf-8');
+    // Pas de job → réponse vide
     return res.status(200).send('');
   }
 
-  // --- On sort le prochain job ---
   const job = q.shift();
 
-  console.log(
-    `[QUEUE] Envoi job à ${printerId} (${job.jobId}) - Reste: ${q.length}`
-  );
-
-  // --- ENVELOPPE SDP OBLIGATOIRE ---
-  // Epson REJETTE les impressions si <epos-print> n’est pas enveloppé.
   const xmlResponse =
-    `<?xml version="1.0" encoding="utf-8"?>` +
-    `<sdp:Envelope xmlns:sdp="http://www.epson-pos.com/schemas/2011/03/sdp">` +
-      `<sdp:Body>` +
-        job.xml +
-      `</sdp:Body>` +
-    `</sdp:Envelope>`;
+    '<?xml version="1.0" encoding="utf-8"?>' +
+    '<PrintRequestInfo Version="3.00">' +
+      '<ePOSPrint>' +
+        '<Parameter>' +
+          `<devid>${printerId}</devid>` +
+          '<timeout>10000</timeout>' +
+          `<printjobid>${job.jobId}</printjobid>` +
+        '</Parameter>' +
+        '<PrintData>' +
+          job.xml +
+        '</PrintData>' +
+      '</ePOSPrint>' +
+    '</PrintRequestInfo>';
 
-  res.set('Content-Type', 'text/xml; charset=utf-8');
+  console.log(`[QUEUE] Envoi job à ${printerId} (${job.jobId})`);
+
   return res.status(200).send(xmlResponse);
 });
 
