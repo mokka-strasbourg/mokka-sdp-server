@@ -10,6 +10,26 @@ const queues = {};
 // STATUT IMPRIMANTE (dernier XML reçu)
 const printerStatus = {};   // ex : { "robertsau_boulangerie": "<notify>..." }
 
+// 🔐 NOUVEAU : token optionnel pour sécuriser certains endpoints
+const PRINT_JOBS_TOKEN = process.env.PRINT_JOBS_TOKEN;
+
+// 🔐 NOUVEAU : middleware de sécurité pour /printJobs (et debug)
+function checkApiKey(req, res, next) {
+  // Si tu n'as pas encore mis de token dans Render, on laisse passer
+  if (!PRINT_JOBS_TOKEN) {
+    console.warn('PRINT_JOBS_TOKEN non défini : /printJobs n’est PAS protégé.');
+    return next();
+  }
+
+  const token = req.headers['x-api-key'];
+
+  if (!token || token !== PRINT_JOBS_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  next();
+}
+
 // MIDDLEWARE
 app.use(bodyParser.json({ limit: '1mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -21,7 +41,8 @@ app.get('/', (req, res) => {
 
 
 // 1) MAKE → AJOUT D'UN JOB DANS LA FILE
-app.post('/printJobs', (req, res) => {
+// 🔐 NOUVEAU : on ajoute checkApiKey ici
+app.post('/printJobs', checkApiKey, (req, res) => {
   const { printerId, jobId, xml } = req.body || {};
 
   if (!printerId || !xml) {
@@ -109,7 +130,18 @@ app.get('/status/:printerId', (req, res) => {
 
 
 // DEBUG
-app.get('/debug/queues', (req, res) => res.json(queues));
+// 🔐 NOUVEAU : on protège l’accès au debug
+app.get('/debug/queues', checkApiKey, (req, res) => res.json(queues));
+
+
+// 🛟 NOUVEAU : filet de sécurité pour éviter que le process Node crashe
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 
 // LANCEMENT SERVEUR
